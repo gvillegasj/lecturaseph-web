@@ -75,7 +75,6 @@ if 'permitir_edicion_bloqueado' not in st.session_state:
     st.session_state.permitir_edicion_bloqueado = False
 if 'justificacion_actual' not in st.session_state:
     st.session_state.justificacion_actual = ""
-# Nueva variable bandera para limpiar el buscador sin errores
 if 'limpiar_buscador' not in st.session_state:
     st.session_state.limpiar_buscador = False
 
@@ -104,7 +103,12 @@ if not st.session_state.ingresado:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        st.image("https://cdn-icons-png.flaticon.com/512/3105/3105807.png", width=120)
+        # Implementación del Logo Empresarial en el Inicio
+        try:
+            st.image("logoeph.jpeg", width=350)
+        except Exception:
+            st.warning("No se encontró el archivo logoeph.jpeg en la carpeta.")
+
         st.title("💧 Sistema Lecturas EPH")
         st.subheader("Control Operativo de Acueducto")
         st.write("Plataforma profesional para validación y registro de micromedición.")
@@ -122,6 +126,14 @@ else:
         registrar_log("Usuario cerró sesión de forma manual.")
         st.session_state.ingresado = False
         st.rerun()
+
+    # Estructura del Logo en la esquina superior derecha del sistema activo
+    col_titulo, col_logo = st.columns([8, 1])
+    with col_logo:
+        try:
+            st.image("logoeph.jpeg", use_container_width=True)
+        except Exception:
+            pass
 
     lista_pestanas = ["📁 Cargue de Archivo"]
 
@@ -225,9 +237,22 @@ else:
 
             st.write(f"**Progreso Operativo:** {leidos} de {total} Suscriptores Procesados ({int(prog * 100)}%)")
             st.progress(prog)
+
+            # Alertas Dinámicas de Cierre y Progreso
+            if prog == 1.0:
+                st.success(
+                    "🎉 ¡Proceso de lectura finalizado al 100%! Por favor, diríjase a la pestaña '📥 Exportar e Informes' para generar el archivo final.")
+            elif prog >= 0.9:
+                st.info(
+                    "💡 Está en la recta final (90%+ del progreso alcanzado). Puede revisar los suscriptores faltantes a continuación:")
+                with st.expander("👀 Validar Suscriptores Pendientes"):
+                    pendientes = df[df['leido'] == False][['codigosuscriptor', 'nombre', 'direccion']]
+                    # Convertir código a string limpio para visualización sin comas de miles
+                    pendientes['codigosuscriptor'] = pendientes['codigosuscriptor'].astype(str)
+                    st.dataframe(pendientes, use_container_width=True)
+
             st.markdown("---")
 
-            # SOLUCIÓN AL ERROR: Limpiamos la variable de estado ANTES de dibujar el widget
             if st.session_state.limpiar_buscador:
                 if 'buscador_operativo' in st.session_state:
                     st.session_state.buscador_operativo = ""
@@ -273,7 +298,8 @@ else:
                         st.markdown("### 📋 Formulario de Entrada Secuencial")
                         st.write(f"Lectura Anterior registrada: **{int(lect_ant)}**")
 
-                        nueva_lect = st.number_input("Ingrese Lectura Actual:", value=None, step=1.0,
+                        # Control estricto de entrada a Enteros (step=1)
+                        nueva_lect = st.number_input("Ingrese Lectura Actual:", value=None, step=1,
                                                      key=f"lect_input_{codigo_buscar}")
 
                         if nueva_lect is not None:
@@ -289,8 +315,10 @@ else:
 
                                 if nueva_lect_int == int(lect_ant):
                                     st.warning("Diferencia de consumo igual a cero M³.")
+                                    # Nueva justificación agregada a la lista
                                     nota_opciones = st.selectbox("Seleccione la justificación de la lectura estática:",
-                                                                 ["Casa sola", "Desocupada", "Otro"])
+                                                                 ["Casa sola", "Desocupada", "Medidor dañado o frenado",
+                                                                  "Otro"])
                                     if nota_opciones == "Otro":
                                         nota_final = st.text_input("Especifique el motivo de la lectura igual:")
                                     else:
@@ -342,7 +370,6 @@ else:
 
                                         st.success("✅ Registro procesado e indexado perfectamente.")
 
-                                        # Activamos la bandera para que limpie en el siguiente inicio
                                         st.session_state.limpiar_buscador = True
                                         st.session_state.permitir_edicion_bloqueado = False
                                         st.session_state.justificacion_actual = ""
@@ -359,7 +386,6 @@ else:
                         st.rerun()
 
                 if st.button("🧹 Limpiar Búsqueda"):
-                    # Activamos la bandera para limpiar
                     st.session_state.limpiar_buscador = True
                     st.session_state.permitir_edicion_bloqueado = False
                     st.session_state.justificacion_actual = ""
